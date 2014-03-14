@@ -61,30 +61,31 @@ z_machine_actual=[(1,0.08),(2,0.84),(3,1.76),(4,2.68),
                   (153,152.84),(154,153.77),(155,154.68),(156,155.57)]
 
 #the z height where the bed arms are at 90 degrees
-square_z=76.97
+square_z=76.97  # USER INPUT
 
 #LENGTH OF ARMS
-l=150
+l=float(150)
+arm_length = l
 
 #DISTANCE BETWEEN SHOULDERS
-L=250
+L=float(250)
 
 #DISTANCE FROM BED ARM ATTACHMENT TO THE CENTER OF THE BED IN THE Y DIRECTION
-y_offset=37.5
+#y_offset=37.5
+wall_to_motor_baseline = 20.0               # motor baseline to wall difference
+wall_to_bed_center_at_z_square = 132.0      # USER INPUT: wall to bed difference in Y at z_square
+motor_to_bed_center = wall_to_bed_center_at_z_square - wall_to_motor_baseline # motor baseline to bed origin difference in Y at z_square
 
 #Using "G1 X? Y?" to find the machine coordinates that make the arms colinear
-straight_forearms=996 
-
+straight_forearms=float(996)    # USER INPUT
 
 machine_z=numpy.array([i for i,j in z_machine_actual])
 actual_z=numpy.array([j for i,j in z_machine_actual])
 square_z=float(square_z)
-l=float(l)
-L=float(L)
-y_offset=float(y_offset)
+
+#y_offset=float(y_offset)
 straight_forearms=float(straight_forearms)
 mechanical_advantage=(straight_forearms/200.0*math.pi+math.asin(1-L/2.0/l)+math.asin(L/4.0/l))/(math.pi-math.acos(1-L/2.0/l))
-
 
 
 
@@ -163,16 +164,23 @@ ap,bp,cp,dp=refPlane()
 
 #print machine2reference((1000,1000,100))
 #print reference2machine((125,125,100))
-def actual2reference((x,y,z)):
-    bed_angle=math.asin((z-interpolate2(square_z))/l)
-    leg_offset=l*math.cos(bed_angle)
-    yprime=y+y_offset-leg_offset
-    xprime=x+L/2
-    zero_z=(-dp-ap*xprime-bp*yprime)/cp
+def actual2reference((gX,gY,gZ)):
+    # bed_angle=math.asin((z-interpolate2(square_z))/l)
+    # leg_offset=l*math.cos(bed_angle)
+    # yprime=y+y_offset-leg_offset
+
+    corrected_z_square = interpolate2(square_z)
+    z_above = corrected_z_square - gZ
+    z_arm_y_offset = math.sqrt(arm_length**2 - z_above**2)
+    y_offset_by_z = arm_length - z_arm_y_offset # in E coords 
+    eY = -gY + y_offset_by_z + motor_to_bed_center  # compensate for motor baseline
+
+    eX=gX+L/2
+    zero_z=(-dp-ap*eX-bp*eY)/cp
     #print xprime,yprime,zero_z
-    zprime=zero_z-z
-    return xprime,yprime,zprime
-#print actual2reference((0,0,0))
+    eZ=zero_z-gZ
+    return eX,eY,eZ
+print actual2reference((0,0,0))
 
 def reference2actual((x,y,z)):
     pass
